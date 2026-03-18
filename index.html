@@ -1,62 +1,103 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Simple Chat</title>
+<title>Blue Chat</title>
 
 <style>
+
 body{
 font-family:Arial;
+background:#e7f1ff;
 text-align:center;
-background:#f2f2f2;
+margin:0;
+}
+
+.header{
+background:#1e6bff;
+color:white;
+padding:12px;
+font-size:18px;
 }
 
 #chat{
-width:300px;
-height:300px;
-margin:auto;
-border:1px solid #ccc;
+width:320px;
+height:350px;
+margin:15px auto;
 background:white;
+border-radius:10px;
 overflow:auto;
 padding:10px;
+box-shadow:0 2px 6px rgba(0,0,0,0.2);
 }
 
 .msg{
-margin:5px;
-padding:6px;
-border-radius:6px;
+margin:6px;
+padding:8px 10px;
+border-radius:10px;
+max-width:70%;
+font-size:14px;
 }
 
 .me{
-background:#c8f7c5;
+background:#1e6bff;
+color:white;
+margin-left:auto;
 text-align:right;
 }
 
 .other{
-background:#eee;
-text-align:left;
+background:#e5edff;
+margin-right:auto;
+}
+
+.time{
+font-size:10px;
+opacity:0.7;
+display:block;
+margin-top:2px;
+}
+
+.status{
+font-size:10px;
+opacity:0.7;
+}
+
+#typing{
+font-size:12px;
+color:#555;
+height:15px;
 }
 
 input{
-padding:8px;
+padding:10px;
 width:200px;
+border-radius:20px;
+border:1px solid #ccc;
 }
 
 button{
-padding:8px;
+padding:9px 14px;
+border:none;
+background:#1e6bff;
+color:white;
+border-radius:20px;
+cursor:pointer;
 }
+
 </style>
 </head>
 
 <body>
 
-<h2 id="user">Connecting...</h2>
+<div class="header" id="user">Connecting...</div>
 
 <div id="chat"></div>
 
-<br>
+<div id="typing"></div>
 
-<input id="msg" placeholder="Type message">
+<input id="msg" placeholder="Type message...">
 <button onclick="send()">Send</button>
+
 
 <script type="module">
 
@@ -67,13 +108,16 @@ getDatabase,
 ref,
 push,
 onChildAdded,
+update,
+set,
 get
 } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+
 
 const firebaseConfig = {
 apiKey: "AIzaSyBv70epw14J0DE-aresEQPl226Dnbbe7Kk",
 authDomain: "chatt-app-140d4.firebaseapp.com",
-databaseURL: "https://chatt-app-140d4-default-rtdb.firebaseio.com/",
+databaseURL:"https://chatt-app-140d4-default-rtdb.firebaseio.com/",
 projectId: "chatt-app-140d4",
 storageBucket: "chatt-app-140d4.firebasestorage.app",
 messagingSenderId: "42467297358",
@@ -100,8 +144,7 @@ myName="User2";
 document.getElementById("user").innerText="You are "+myName;
 
 push(usersRef,{
-name:myName,
-time:Date.now()
+name:myName
 });
 
 }
@@ -113,9 +156,9 @@ const messagesRef = ref(db,"messages");
 onChildAdded(messagesRef,(data)=>{
 
 const msg=data.val();
+const key=data.key;
 
 const div=document.createElement("div");
-
 div.classList.add("msg");
 
 if(msg.sender===myName){
@@ -124,9 +167,20 @@ div.classList.add("me");
 div.classList.add("other");
 }
 
-div.innerText=msg.sender+": "+msg.text;
+const time=new Date(msg.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+div.innerHTML=
+msg.text+
+"<span class='time'>"+time+"</span>"+
+(msg.sender===myName?"<span class='status'> "+(msg.seen?"✔✔":"✔")+"</span>":"");
 
 document.getElementById("chat").appendChild(div);
+
+document.getElementById("chat").scrollTop=999999;
+
+if(msg.sender!==myName){
+update(ref(db,"messages/"+key),{seen:true});
+}
 
 });
 
@@ -140,12 +194,46 @@ if(text==="") return;
 
 push(ref(db,"messages"),{
 sender:myName,
-text:text
+text:text,
+time:Date.now(),
+seen:false
 });
 
 document.getElementById("msg").value="";
 
+stopTyping();
+
 }
+
+function typing(){
+
+set(ref(db,"typing"),myName);
+
+}
+
+function stopTyping(){
+
+set(ref(db,"typing"),"");
+
+}
+
+document.getElementById("msg").addEventListener("input",typing);
+
+onChildAdded(ref(db,"typing"),()=>{});
+
+import { onValue } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+
+onValue(ref(db,"typing"),(snap)=>{
+
+const t=snap.val();
+
+if(t && t!==myName){
+document.getElementById("typing").innerText=t+" is typing...";
+}else{
+document.getElementById("typing").innerText="";
+}
+
+});
 
 join();
 listen();
