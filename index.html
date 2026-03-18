@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Simple Chat</title>
+
+<style>
+body{
+font-family:Arial;
+text-align:center;
+background:#f2f2f2;
+}
+
+#chat{
+width:300px;
+height:300px;
+margin:auto;
+border:1px solid #ccc;
+background:white;
+overflow:auto;
+padding:10px;
+}
+
+.msg{
+margin:5px;
+padding:6px;
+border-radius:6px;
+}
+
+.me{
+background:#c8f7c5;
+text-align:right;
+}
+
+.other{
+background:#eee;
+text-align:left;
+}
+
+input{
+padding:8px;
+width:200px;
+}
+
+button{
+padding:8px;
+}
+</style>
+</head>
+
+<body>
+
+<h2 id="user">Connecting...</h2>
+
+<div id="chat"></div>
+
+<br>
+
+<input id="msg" placeholder="Type message">
+<button onclick="send()">Send</button>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+
+import {
+getDatabase,
+ref,
+push,
+onChildAdded,
+get
+} from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyBv70epw14J0DE-aresEQPl226Dnbbe7Kk",
+authDomain: "chatt-app-140d4.firebaseapp.com",
+databaseURL: "https://chatt-app-140d4-default-rtdb.firebaseio.com/",
+projectId: "chatt-app-140d4",
+storageBucket: "chatt-app-140d4.firebasestorage.app",
+messagingSenderId: "42467297358",
+appId: "1:42467297358:web:7100f2b25646a86f499b1f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let myName="";
+
+async function join(){
+
+const usersRef = ref(db,"users");
+
+const snapshot = await get(usersRef);
+
+if(!snapshot.exists()){
+myName="User1";
+}else{
+myName="User2";
+}
+
+document.getElementById("user").innerText="You are "+myName;
+
+push(usersRef,{
+name:myName,
+time:Date.now()
+});
+
+}
+
+function listen(){
+
+const messagesRef = ref(db,"messages");
+
+onChildAdded(messagesRef,(data)=>{
+
+const msg=data.val();
+
+const div=document.createElement("div");
+
+div.classList.add("msg");
+
+if(msg.sender===myName){
+div.classList.add("me");
+}else{
+div.classList.add("other");
+}
+
+div.innerText=msg.sender+": "+msg.text;
+
+document.getElementById("chat").appendChild(div);
+
+});
+
+}
+
+function send(){
+
+const text=document.getElementById("msg").value;
+
+if(text==="") return;
+
+push(ref(db,"messages"),{
+sender:myName,
+text:text
+});
+
+document.getElementById("msg").value="";
+
+}
+
+join();
+listen();
+
+</script>
+
+</body>
+</html>
